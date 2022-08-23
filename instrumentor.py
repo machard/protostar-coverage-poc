@@ -1,4 +1,4 @@
-from tokenize import Number
+import textwrap
 from starkware.cairo.lang.compiler.ast.code_elements import CodeElementHint, CodeElementFunction, CommentedCodeElement, CodeBlock
 from starkware.cairo.lang.compiler.ast.expr import (
     ExprHint,
@@ -11,7 +11,7 @@ class Instrumentor(Visitor):
     Instrument functions with tracking code.
     """
 
-    def __init__(self, total_functions: int, total_statements: Number):
+    def __init__(self, total_functions: int, total_statements: int):
         super().__init__()
         self.total_functions = total_functions
         self.total_statements = total_statements
@@ -26,16 +26,13 @@ class Instrumentor(Visitor):
 
         total_elements = len(elm.code_elements)
 
+        parent = self.parents[-1]
+
         for i in range(total_elements - 1, -1, -1):
-            if i > 0:
-                code = f'''
-                    fi = getframeinfo(currentframe())
-                    context.COVERAGE["statements"][fi.filename + \
-                        "_" + str(fi.lineno)] = True
-                '''
-            else:
-                code = f'''
-                    from inspect import currentframe, getframeinfo
+            code = ''
+
+            if i == 0 and isinstance(parent, CodeElementFunction):
+                code += textwrap.dedent(f'''\
                     try:
                         # context is immutable, allows to only set it up once
                         context.COVERAGE = {{
@@ -46,12 +43,12 @@ class Instrumentor(Visitor):
                         }}
                     except:
                         pass
-                    fi = getframeinfo(currentframe())
-                    context.COVERAGE["functions"][fi.filename + \
-                        "_" + "increase_balance"] = True
-                    context.COVERAGE["statements"][fi.filename + \
-                        "_" + str(fi.lineno)] = True,
-                '''
+                    context.COVERAGE["functions"]["{parent.name + "@" + str(elm.code_elements[i].location)}"] = True
+                ''')
+
+            code += textwrap.dedent(f'''\
+                    context.COVERAGE["statements"]["{elm.code_elements[i].location}"] = True
+            ''')
 
             elm.code_elements.insert(
                 i,
