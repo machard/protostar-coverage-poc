@@ -1,5 +1,5 @@
 from starkware.cairo.lang.compiler.ast.visitor import Visitor
-from starkware.cairo.lang.compiler.ast.code_elements import CodeElementFunction, CodeBlock
+from starkware.cairo.lang.compiler.ast.code_elements import CodeElementFunction, CodeBlock, CodeElementHint
 
 
 class Counter(Visitor):
@@ -18,7 +18,8 @@ class Counter(Visitor):
     def visit_CodeBlock(self, elm: CodeBlock):
         # we don't want to catch top level code elements since we can't instrument them with hints anyway
         if len(self.parents) > 1:
-            self.total_statements += len(elm.code_elements)
+            self.total_statements += len(
+                [x for x in elm.code_elements if not isinstance(x.code_elm, CodeElementHint)])
 
         super().visit_CodeBlock(elm)
 
