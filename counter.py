@@ -25,7 +25,7 @@ class Counter(Visitor):
     def visit_CodeElementFunction(self, elm: CodeElementFunction):
         # we remove the one we can't instrument
         need_instrumentation = any(decorator.name not in [
-                                   "storage_var"] for decorator in elm.decorators)
+                                   "storage_var"] for decorator in elm.decorators) and elm.element_type not in ['struct', 'namespace']
 
         if not need_instrumentation:
             return
